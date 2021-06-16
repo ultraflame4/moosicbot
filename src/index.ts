@@ -1,6 +1,11 @@
 import * as Discord from "discord.js"
-import {init_serverline} from "./core";
+import {BotGuildContextManager, init_serverline} from "./core";
 import {Commands} from "./commands";
+import {channel} from "diagnostic_channel";
+
+
+BotGuildContextManager.load()
+
 
 const client = new Discord.Client({intents:Discord.Intents.NON_PRIVILEGED})
 

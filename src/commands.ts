@@ -1,7 +1,10 @@
 import * as Discord from "discord.js"
 
 import {BotGuildContextManager, replySuccess, replyError} from "./core"
-import {ButtonInteraction} from "discord.js";
+import {ButtonInteraction, TextChannel, VoiceChannel} from "discord.js";
+import {channel} from "diagnostic_channel";
+import {joinVoiceChannel} from "@discordjs/voice";
+import ytdl from "ytdl-core";
 
 type CommandCallback = (args:string[],msg:Discord.Message)=>void
 
@@ -114,21 +117,44 @@ Commands.addCommand("setChannel",(args, msg) => {
     let target_channel = msg.guild.channels.cache.find(channel => channel.name===channelName && channel.type==="voice")
 
     if (target_channel===undefined){
-        replyError("505 VoiceChannel not found",`MoosicBot cannot find VoiceChannel of ${channelName} in your server`,msg)
+        replyError("500 VoiceChannel not found",`MoosicBot cannot find VoiceChannel of ${channelName} in your server`,msg)
         return
     }
 
-    BotGuildContextManager.getContext(msg.guild.id).setChannel(target_channel)
+    BotGuildContextManager.getContext(msg.guild.id).setChannel(target_channel.id)
     replySuccess("Successfully set VoiceChannel",`MoosicBot has successfully set the VoiceChannel to join to ${channelName}`,msg)
+    BotGuildContextManager.save()
 })
 
 Commands.addCommand("join",(args, msg)=>{
     let guildCtx = BotGuildContextManager.getContext(msg.guild.id)
-    if (guildCtx.voiceChannelId===null){
-        replyError("403 VoiceChannel not set","A voice channel was not set for MoosicBot to join. Set one with setChannel [name]",msg)
-        return
+    guildCtx.joinChannel(msg)
+})
+
+
+Commands.addCommand("play",(args, msg) => {
+    let guildCtx = BotGuildContextManager.getContext(msg.guild.id)
+    if (guildCtx.voiceChannelConnection===null){
+        guildCtx.joinChannel(msg,(player)=>{
+            play_worker()
+        })
     }
     else{
-        return;
+        play_worker()
+    }
+    
+    function play_worker() {
+        if (args[0] === undefined){
+            console.log("No link specified, playing default")
+            guildCtx.play("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        }
+        else {
+            if(ytdl.validateURL(args[0])){
+                guildCtx.play(args[0])
+            }
+            else{
+                replyError("400 Bad Request","Youtube url link provided is not valid",msg)
+            }
+        }
     }
 })
